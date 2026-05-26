@@ -123,18 +123,20 @@ app.post('/acceso', (req, res) => {
         }
 
         if(vista === 'cargar') {
-    let opt = ''; 
-    datosGlobales.sectores.forEach( s => { 
-        opt += '<option value="' + s.id + '">' + s.nombre + '</option>'; 
+    let opt = '';
+    datosGlobales.sectores.forEach( s => {
+        opt += '<option value="' + s.id + '">' + s.nombre + '</option>';
     });
-    c.innerHTML = `
-    <h2>Cargar Nuevo Gasto</h2>
-    <form action="/guardar" method="POST">
-        <input name="nombre" required placeholder="¿Qué compraste? Ej: Arroz, Jabón...">
-        <select name="sector" required>${opt}</select>
-        <input name="precio" type="number" step="0.01" required placeholder="¿Cuánto costó? ($)">
-        <button class="btn-verde">💾 GUARDAR REGISTRO</button>
-    </form>`;
+
+    c.innerHTML = 
+    '<h2>Cargar Nuevo Gasto</h2>' +
+    '<form action="/guardar" method="POST">' +
+        '<input name="nombre" required placeholder="¿Qué compraste? Ej: Arroz, Jabón...">' +
+        '<select name="sector" required>' + opt + '</select>' +
+        '<input name="precio" type="number" step="0.01" required placeholder="¿Cuánto costó? ($)">' +
+        '<button class="btn-verde">💾 GUARDAR REGISTRO</button>' +
+    '</form>';
+}
 }
             <select name="sector" required>${opt}</select>
             <input name="precio" type="number" step="0.01" required placeholder="¿Cuánto costó? ($)">
