@@ -1,15 +1,14 @@
 {
-  "name": "sistema-gastos",
+  "name": "sistema-gastos-hogar",
   "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js"
-  },
-  "engines": {
-    "node": "18.x"
+    "start": "node server.js"
   },
   "dependencies": {
-    "express": "4.18.2"
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "mongoose": "^8.0.0"
   }
 }
+
