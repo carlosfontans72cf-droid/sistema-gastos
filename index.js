@@ -5,7 +5,6 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Archivo de datos
 const DATA_FILE = path.join(__dirname, 'datos.json');
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify({
@@ -28,14 +27,17 @@ if (!fs.existsSync(DATA_FILE)) {
   }, null, 2));
 }
 
-// Funciones
-function leerDatos() { return JSON.parse(fs.readFileSync(DATA_FILE)); }
-function guardarDatos(datos) { fs.writeFileSync(DATA_FILE, JSON.stringify(datos, null, 2)); }
+function leerDatos() {
+  return JSON.parse(fs.readFileSync(DATA_FILE));
+}
+
+function guardarDatos(datos) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(datos, null, 2));
+}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ESTILOS
 const estilos = `
 <style>
     * {margin:0;padding:0;box-sizing:border-box;font-family:Arial}
@@ -57,7 +59,6 @@ const estilos = `
 </style>
 `;
 
-// PÁGINA PRINCIPAL - LOGIN
 app.get('/', (req, res) => {
   const datos = leerDatos();
   res.send(`
@@ -76,7 +77,6 @@ app.get('/', (req, res) => {
   `);
 });
 
-// VERIFICAR ACCESO
 app.post('/acceso', (req, res) => {
   const datos = leerDatos();
   const user = datos.usuarios.find(u => u.nombre === req.body.nombre && u.codigoAcceso === req.body.codigo && u.activo);
@@ -84,10 +84,7 @@ app.post('/acceso', (req, res) => {
     return res.send(`<div class="contenedor"><div class="alerta-roja tarjeta" style="max-width:400px;margin:auto"><h3>❌ DATOS INCORRECTOS</h3><a href="/" style="color:#721c24;font-weight:bold">Volver a intentar</a></div></div>`);
   }
   res.send(`<script>localStorage.setItem('u',JSON.stringify({id:'${user.id}',rol:'${user.rol}',nombre:'${user.nombre}'}));location.href='/panel';</script>`);
-});
-
-// PANEL DE CONTROL
-app.get('/panel', (req, res) => {
+});app.get('/panel', (req, res) => {
   const datos = leerDatos();
   res.send(`
     <html><head><title>Panel de Control</title>${estilos}</head>
@@ -110,7 +107,6 @@ app.get('/panel', (req, res) => {
         if(!dato) return location.href='/';
         usuario = JSON.parse(dato);
         document.getElementById('userData').textContent = 'Conectado: ' + usuario.nombre + ' ('+usuario.rol+')';
-        // Menú extra si es admin o dueño
         if(usuario.rol === 'dueno' || usuario.rol === 'admin') {
           document.getElementById('menuAdmin').innerHTML += '<a href="#" onclick="mostrar(\\'admin\\');return false;">⚙️ Administrar Usuarios</a>';
         }
@@ -173,7 +169,6 @@ app.get('/panel', (req, res) => {
   `);
 });
 
-// GUARDAR GASTO
 app.post('/guardar', (req, res) => {
   const datos = leerDatos();
   datos.productos.push(req.body);
@@ -181,7 +176,6 @@ app.post('/guardar', (req, res) => {
   res.send(`<script>alert('✅ GASTO GUARDADO CORRECTAMENTE');location.href='/panel#historial';</script>`);
 });
 
-// BORRAR GASTO
 app.get('/borrar/:indice', (req, res) => {
   const datos = leerDatos();
   datos.productos.splice(req.params.indice, 1);
@@ -189,7 +183,6 @@ app.get('/borrar/:indice', (req, res) => {
   res.redirect('/panel');
 });
 
-// CREAR USUARIO
 app.post('/crear-usuario', (req, res) => {
   const datos = leerDatos();
   if(datos.usuarios.some(u => u.codigoAcceso === req.body.codigo)) {
@@ -202,7 +195,6 @@ app.post('/crear-usuario', (req, res) => {
   res.send(`<script>alert('✅ USUARIO CREADO');location.href='/panel';</script>`);
 });
 
-// CAMBIAR DATOS DUEÑO
 app.post('/cambiar-dueno', (req, res) => {
   const datos = leerDatos();
   const dueno = datos.usuarios.find(u => u.rol === 'dueno');
@@ -212,7 +204,6 @@ app.post('/cambiar-dueno', (req, res) => {
   res.send(`<script>alert('✅ DATOS ACTUALIZADOS. Tenés que volver a entrar.');localStorage.clear();location.href='/';</script>`);
 });
 
-// INICIAR
 app.listen(PORT, '0.0.0.0', () => {
   console.log('✅ SISTEMA COMPLETO Y FUNCIONANDO');
 });
