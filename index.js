@@ -76,7 +76,7 @@ const estilos = `
 </style>
 `;
 
-// LOGIN
+// LOGIN - ✅ ARREGLADO PARA QUE RECONOZCA A TODOS LOS USUARIOS
 app.get('/', (req, res) => {
   const datos = leerDatos();
   res.send(`
@@ -97,11 +97,27 @@ app.get('/', (req, res) => {
 
 app.post('/acceso', (req, res) => {
   const datos = leerDatos();
-  const user = datos.usuarios.find(u => u.nombre === req.body.nombre && u.codigoAcceso === req.body.codigo && u.activo);
+  // ✅ ARREGLO CLAVE: Buscamos sin importar mayúsculas/minúsculas y espacios
+  const nombreIngresado = req.body.nombre.trim().toLowerCase();
+  const user = datos.usuarios.find(u => 
+    u.nombre.trim().toLowerCase() === nombreIngresado && 
+    u.codigoAcceso === req.body.codigo && 
+    u.activo === true
+  );
+
   if (!user) {
     return res.send(`<div class="contenedor"><div class="alerta-roja tarjeta" style="max-width:400px;margin:auto"><h3>❌ DATOS INCORRECTOS</h3><a href="/" style="color:#721c24;font-weight:bold">Volver a intentar</a></div></div>`);
   }
-  res.send(`<script>localStorage.setItem('u',JSON.stringify({id:'${user.id}',rol:'${user.rol}',nombre:'${user.nombre}'}));location.href='/panel';</script>`);
+  
+  // ✅ Guardamos bien todos los datos del usuario nuevo
+  res.send(`<script>
+    localStorage.setItem('u', JSON.stringify({
+      id:'${user.id}',
+      rol:'${user.rol}',
+      nombre:'${user.nombre}'
+    }));
+    location.href='/panel';
+  </script>`);
 });
 
 // PANEL PRINCIPAL
@@ -153,12 +169,12 @@ app.get('/panel', (req, res) => {
         usuario = JSON.parse(dato);
         document.getElementById('userData').textContent = 'Conectado: ' + usuario.nombre + ' (' + usuario.rol + ')';
 
-        // ✅ MOSTRAR OPCIONES SEGÚN ROL (100% FUNCIONANDO)
+        // ✅ MOSTRAR OPCIONES SEGÚN ROL (FUNCIONA PARA USUARIOS NUEVOS TAMBIÉN)
         if (usuario.rol === 'dueno' || usuario.rol === 'admin') {
           document.getElementById('opcionAdmin').style.display = 'inline-block';
         }
         if (usuario.rol === 'dueno') {
-          document.getElementById('opcionDinero').style.display = 'inline-block'; // Solo dueño pone la plata
+          document.getElementById('opcionDinero').style.display = 'inline-block';
           document.getElementById('opcionConfig').style.display = 'inline-block';
         }
 
@@ -202,7 +218,6 @@ app.get('/panel', (req, res) => {
             html += '<tr><td>' + p.nombre +'</td><td>' + (sec ? sec.nombre : 'Sin categoría') + '</td><td>$ ' + p.precio + '</td><td><a href="/borrar/' + i + '" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">ELIMINAR</a></td></tr>';
           });
           
-          // PONEMOS EL TOTAL AL FINAL DE LA TABLA
           html += '<tr style="background:#f8f9fa;font-weight:bold"><td colspan="2">TOTAL GASTADO</td><td colspan="2">$ ' + totalVista + '</td></tr>';
           html += '</table>';
         }
@@ -211,10 +226,13 @@ app.get('/panel', (req, res) => {
         if (vista === 'admin' && (usuario.rol === 'admin' || usuario.rol === 'dueno')) {
           html = '<h2>Crear Nuevo Usuario</h2>' +
                  '<form action="/crear-usuario" method="POST">' +
-                 '<input name="nombre" required placeholder="Nombre completo">' +
-                 '<input name="codigo" required placeholder="Código numérico">' +
-                 '<select name="rol"><option value="staff">Empleado</option><option value="admin">Administrador</option></select>' +
-                 '<button class="btn-verde">➕ CREAR USUARIO</button>' +
+                 '<input name="nombre" required placeholder="Nombre completo (Ej: Luis)">' +
+                 '<input name="codigo" required placeholder="Código numérico (Ej: 1111)">' +
+                 '<select name="rol">' +
+                 '<option value="staff">Empleado / Solo carga gastos</option>' +
+                 '<option value="admin">Administrador / Carga y crea usuarios</option>' +
+                 '</select>' +
+                 '<button class="btn-verde">➕ CREAR USUARIO NUEVO</button>' +
                  '</form>';
         }
 
@@ -249,7 +267,7 @@ app.get('/panel', (req, res) => {
 app.post('/guardar', (req, res) => {
   const datos = leerDatos();
   datos.productos.push(req.body);
-  calcularTotales(datos); // Recalcula todo al guardar
+  calcularTotales(datos);
   res.send(`<script>alert('✅ GASTO GUARDADO. Los totales se actualizaron.');location.href='/panel';</script>`);
 });
 
@@ -257,21 +275,33 @@ app.post('/guardar', (req, res) => {
 app.get('/borrar/:indice', (req, res) => {
   const datos = leerDatos();
   datos.productos.splice(req.params.indice, 1);
-  calcularTotales(datos); // Recalcula todo al borrar
+  calcularTotales(datos);
   res.redirect('/panel');
 });
 
-// ➕ CREAR USUARIO
+// ➕ CREAR USUARIO - ✅ ARREGLADO PARA QUE GUARDE BIEN Y SE PUEDA USAR
 app.post('/crear-usuario', (req, res) => {
   const datos = leerDatos();
-  if(datos.usuarios.some(u => u.codigoAcceso === req.body.codigo)) {
-    return res.send(`<script>alert('❌ Código ya existe');history.back();</script>`);
+  
+  // Verificar si el código ya existe
+  const existe = datos.usuarios.some(u => u.codigoAcceso === req.body.codigo.trim());
+  if(existe) {
+    return res.send(`<script>alert('❌ Ese código ya existe, elegí otro');history.back();</script>`);
   }
-  req.body.id = 'u'+Date.now();
-  req.body.activo = true;
-  datos.usuarios.push(req.body);
+
+  // Crear el usuario nuevo con todos los datos correctos
+  const nuevoUsuario = {
+    id: 'u' + Date.now(),
+    nombre: req.body.nombre.trim(),
+    codigoAcceso: req.body.codigo.trim(),
+    rol: req.body.rol,
+    activo: true
+  };
+
+  datos.usuarios.push(nuevoUsuario);
   guardarDatos(datos);
-  res.send(`<script>alert('✅ USUARIO CREADO');location.href='/panel';</script>`);
+  
+  res.send(`<script>alert('✅ USUARIO CREADO CORRECTAMENTE\\n\\nNombre: ${nuevoUsuario.nombre}\\nCódigo: ${nuevoUsuario.codigoAcceso}\\n\\nYA PUEDE ENTRAR CON ESTOS DATOS!');location.href='/panel';</script>`);
 });
 
 // 💵 CAMBIAR DINERO INICIAL
@@ -286,14 +316,14 @@ app.post('/cambiar-dinero', (req, res) => {
 app.post('/cambiar-dueno', (req, res) => {
   const datos = leerDatos();
   const dueno = datos.usuarios.find(u => u.rol === 'dueno');
-  dueno.nombre = req.body.nuevoNombre;
-  dueno.codigoAcceso = req.body.nuevoCodigo;
+  dueno.nombre = req.body.nuevoNombre.trim();
+  dueno.codigoAcceso = req.body.nuevoCodigo.trim();
   guardarDatos(datos);
   res.send(`<script>alert('✅ DATOS ACTUALIZADOS');localStorage.clear();location.href='/';</script>`);
 });
 
 // INICIAR SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('✅ SISTEMA COMPLETO CON DINERO Y TOTALES');
+  console.log('✅ SISTEMA COMPLETO - USUARIOS FUNCIONANDO 100%');
 });
 
