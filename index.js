@@ -5,6 +5,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Archivo de datos
 const DATA_FILE = path.join(__dirname, 'datos.json');
 if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify({
   config: { nombreApp: "Organización del Hogar" },
@@ -25,12 +26,15 @@ if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify({
   productos: []
 }, null, 2));
 
+// Funciones auxiliares
 function leerDatos() { return JSON.parse(fs.readFileSync(DATA_FILE)); }
 function guardarDatos(datos) { fs.writeFileSync(DATA_FILE, JSON.stringify(datos, null, 2)); }
 
+// Configuración básica
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Estilos CSS
 const estilos = `
 <style>
     * {margin:0;padding:0;box-sizing:border-box;font-family:Arial}
@@ -52,6 +56,7 @@ const estilos = `
 </style>
 `;
 
+// RUTAS
 app.get('/', (req, res) => {
   const datos = leerDatos();
   res.send(`
@@ -177,4 +182,5 @@ app.post('/cambiar-dueno', (req, res) => {
   res.send(`<script>alert('✅ Datos actualizados, volvé a ingresar');localStorage.clear();location.href='/';</script>`);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log('✅ SISTEMA COMPLETAMENTE FUNCIONANDO'));
+// Iniciar servidor
+app.listen(PORT, '0.0.0.0', () => console.log('✅ SISTEMA 100% FUNCIONANDO SIN ERRORES'));
