@@ -149,7 +149,7 @@ app.get('/panel', (req, res) => {
         }
 
         if(vista === 'admin' && (usuario.rol === 'admin' || usuario.rol === 'dueno')) {
-          c.innerHTML = `
+          c.innerHTML = 
           <h2>Crear Nuevo Usuario</h2>
           <form action="/crear-usuario" method="POST">
             <input name="nombre" required placeholder="Nombre completo">
@@ -160,7 +160,7 @@ app.get('/panel', (req, res) => {
         }
 
         if(vista === 'dueno' && usuario.rol === 'dueno') {
-          c.innerHTML = `
+          c.innerHTML = 
           <h2>Actualizar Datos del Dueño</h2>
           <form action="/cambiar-dueno" method="POST">
             <input name="nuevoNombre" required placeholder="Nuevo nombre">
