@@ -91,9 +91,12 @@ app.get('/panel', (req, res) => {
     <body><div class="contenedor">
       <div class="header">🏠 Sistema de Gastos <p id="userData" style="font-size:14px;margin-top:5px;opacity:0.9"></p></div>
       
-      <!-- 🛠️ MENÚ ARREGLADO COMPLETAMENTE -->
-      <div class="nav" id="menuPrincipal">
-        <!-- AQUÍ SE CARGA TODO EL MENÚ SEGÚN EL USUARIO -->
+      <div class="nav">
+        <a href="#" onclick="mostrar('inicio'); return false;">🏠 Inicio</a>
+        <a href="#" onclick="mostrar('cargar'); return false;">📝 Cargar Gasto</a>
+        <a href="#" onclick="mostrar('historial'); return false;">📜 Ver Historial</a>
+        <span id="menuAdmin"></span>
+        <a href="/" style="color:#dc2626">🚪 Cerrar Sesión</a>
       </div>
 
       <div id="contenido" class="tarjeta"></div>
@@ -101,85 +104,76 @@ app.get('/panel', (req, res) => {
     <script>
       const datosGlobales = ${JSON.stringify(datos)};
       let usuario;
+      
       window.onload = function() {
         const dato = localStorage.getItem('u');
-        if(!dato) return location.href='/';
-        usuario = JSON.parse(dato);
-        document.getElementById('userData').textContent = 'Conectado: ' + usuario.nombre + ' ('+usuario.rol+')';
-
-        // ✅ ARMAMOS EL MENÚ ENTERO AQUÍ, ASÍ NO FALLA
-        let menuHTML = '';
-        menuHTML += '<a href="#" onclick="mostrar(\'inicio\');return false;">🏠 Inicio</a>';
-        menuHTML += '<a href="#" onclick="mostrar(\'cargar\');return false;">📝 Cargar Gasto</a>';
-        menuHTML += '<a href="#" onclick="mostrar(\'historial\');return false;">📜 Ver Historial</a>';
+        if (!dato) { location.href='/'; return; }
         
-        if(usuario.rol === 'dueno' || usuario.rol === 'admin') {
-          menuHTML += '<a href="#" onclick="mostrar(\'admin\');return false;">⚙️ Administrar Usuarios</a>';
-        }
-        if(usuario.rol === 'dueno') {
-          menuHTML += '<a href="#" onclick="mostrar(\'dueno\');return false;">👑 Configuración</a>';
-        }
+        usuario = JSON.parse(dato);
+        document.getElementById('userData').textContent = 'Conectado: ' + usuario.nombre + ' (' + usuario.rol + ')';
 
-        menuHTML += '<a href="/" style="color:#dc2626">🚪 Cerrar Sesión</a>';
-        document.getElementById('menuPrincipal').innerHTML = menuHTML;
+        // MOSTRAR OPCIONES SEGÚN ROL - ARREGLADO 100%
+        if (usuario.rol === 'dueno' || usuario.rol === 'admin') {
+          document.getElementById('menuAdmin').innerHTML = '<a href="#" onclick="mostrar(\\'admin\\'); return false;">⚙️ Administrar</a>';
+        }
+        if (usuario.rol === 'dueno') {
+          document.getElementById('menuAdmin').innerHTML += '<a href="#" onclick="mostrar(\\'dueno\\'); return false;">👑 Configuración</a>';
+        }
 
         mostrar('inicio');
       }
 
       function mostrar(vista) {
         const c = document.getElementById('contenido');
-        if(vista === 'inicio') {
-          c.innerHTML = '<h2 style="text-align:center;margin-top:30px">✅ BIENVENIDO AL SISTEMA</h2><p style="text-align:center;margin-top:15px;font-size:16px">Usá el menú de arriba para empezar a cargar o ver gastos.</p>';
+        let html = '';
+
+        if (vista === 'inicio') {
+          html = '<h2 style="text-align:center;margin-top:30px">✅ BIENVENIDO AL SISTEMA</h2><p style="text-align:center;margin-top:15px;font-size:16px">Usá el menú de arriba para navegar entre las opciones.</p>';
         }
 
-        if(vista === 'cargar') {
+        if (vista === 'cargar') {
           let opt = ''; 
-          datosGlobales.sectores.forEach( function(s) { 
-            opt = opt + '<option value="' + s.id + '">' + s.nombre + '</option>'; 
+          datosGlobales.sectores.forEach(function(s) { 
+            opt += '<option value="' + s.id + '">' + s.nombre + '</option>'; 
           });
-          let html = '';
-          html = html + '<h2>Cargar Nuevo Gasto</h2>';
-          html = html + '<form action="/guardar" method="POST">';
-          html = html + '<input name="nombre" required placeholder="¿Qué compraste? Ej: Arroz, Jabón...">';
-          html = html + '<select name="sector" required>' + opt + '</select>';
-          html = html + '<input name="precio" type="number" step="0.01" required placeholder="¿Cuánto costó? ($)">';
-          html = html + '<button class="btn-verde">💾 GUARDAR REGISTRO</button>';
-          html = html + '</form>';
-          c.innerHTML = html;
+          html = '<h2>Cargar Nuevo Gasto</h2>' +
+                 '<form action="/guardar" method="POST">' +
+                 '<input name="nombre" required placeholder="¿Qué compraste? Ej: Arroz, Jabón...">' +
+                 '<select name="sector" required>' + opt + '</select>' +
+                 '<input name="precio" type="number" step="0.01" required placeholder="¿Cuánto costó? ($)">' +
+                 '<button class="btn-verde">💾 GUARDAR REGISTRO</button>' +
+                 '</form>';
         }
 
-        if(vista === 'historial') {
-          let html = '<h2>Historial Completo</h2><table><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acción</th></tr>';
-          datosGlobales.productos.forEach( function(p,i) {
-            const sec = datosGlobales.sectores.find(function(s){ return s.id===p.sector; });
-            html += '<tr><td>' + p.nombre + '</td><td>' + (sec?sec.nombre:'Sin categoría') + '</td><td>$' + p.precio + '</td><td><a href="/borrar/' + i + '" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">ELIMINAR</a></td></tr>';
+        if (vista === 'historial') {
+          html = '<h2>Historial Completo</h2><table><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acción</th></tr>';
+          datosGlobales.productos.forEach(function(p, i) {
+            const sec = datosGlobales.sectores.find(s => s.id === p.sector);
+            html += '<tr><td>' + p.nombre + '</td><td>' + (sec ? sec.nombre : 'Sin categoría') + '</td><td>$' + p.precio + '</td><td><a href="/borrar/' + i + '" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">ELIMINAR</a></td></tr>';
           });
-          html += '</table>'; 
-          c.innerHTML = html;
+          html += '</table>';
         }
 
-        if(vista === 'admin' && (usuario.rol === 'admin' || usuario.rol === 'dueno')) {
-          let html = '';
-          html += '<h2>Crear Nuevo Usuario</h2>';
-          html += '<form action="/crear-usuario" method="POST">';
-          html += '<input name="nombre" required placeholder="Nombre completo">';
-          html += '<input name="codigo" required placeholder="Código de acceso (números)">';
-          html += '<select name="rol"><option value="staff">Empleado / Trabajador</option><option value="admin">Administrador</option></select>';
-          html += '<button class="btn-verde">➕ CREAR USUARIO</button>';
-          html += '</form>';
-          c.innerHTML = html;
+        if (vista === 'admin' && (usuario.rol === 'admin' || usuario.rol === 'dueno')) {
+          html = '<h2>Crear Nuevo Usuario</h2>' +
+                 '<form action="/crear-usuario" method="POST">' +
+                 '<input name="nombre" required placeholder="Nombre completo">' +
+                 '<input name="codigo" required placeholder="Código de acceso (números)">' +
+                 '<select name="rol"><option value="staff">Empleado / Trabajador</option><option value="admin">Administrador</option></select>' +
+                 '<button class="btn-verde">➕ CREAR USUARIO</button>' +
+                 '</form>';
         }
 
-        if(vista === 'dueno' && usuario.rol === 'dueno') {
-          let html = '';
-          html += '<h2>Actualizar Datos del Dueño</h2>';
-          html += '<form action="/cambiar-dueno" method="POST">';
-          html += '<input name="nuevoNombre" required placeholder="Nuevo nombre">';
-          html += '<input name="nuevoCodigo" required placeholder="Nuevo código">';
-          html += '<button class="btn-verde">🔄 ACTUALIZAR</button>';
-          html += '</form>';
-          c.innerHTML = html;
+        if (vista === 'dueno' && usuario.rol === 'dueno') {
+          html = '<h2>Actualizar Datos del Dueño</h2>' +
+                 '<form action="/cambiar-dueno" method="POST">' +
+                 '<input name="nuevoNombre" required placeholder="Nuevo nombre">' +
+                 '<input name="nuevoCodigo" required placeholder="Nuevo código">' +
+                 '<button class="btn-verde">🔄 ACTUALIZAR</button>' +
+                 '</form>';
         }
+
+        c.innerHTML = html;
       }
     </script>
     </body></html>
@@ -206,13 +200,13 @@ app.get('/borrar/:indice', (req, res) => {
 app.post('/crear-usuario', (req, res) => {
   const datos = leerDatos();
   if(datos.usuarios.some(u => u.codigoAcceso === req.body.codigo)) {
-    return res.send(`<script>alert('❌ Ese código ya existe, elegí otro')</script>`);
+    return res.send(`<script>alert('❌ Ese código ya existe, elegí otro');history.back();</script>`);
   }
   req.body.id = 'u'+Date.now();
   req.body.activo = true;
   datos.usuarios.push(req.body);
   guardarDatos(datos);
-  res.send(`<script>alert('✅ USUARIO CREADO');location.href='/panel';</script>`);
+  res.send(`<script>alert('✅ USUARIO CREADO CORRECTAMENTE');location.href='/panel';</script>`);
 });
 
 // CAMBIAR DUEÑO
