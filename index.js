@@ -75,11 +75,11 @@ const estilos = `
     .alerta-roja {background:#f8d7da;color:#721c24;padding:10px;border-radius:5px;margin:10px 0;text-align:center}
     .lista-codigos {background:#f8f9fa;padding:10px;border-radius:8px;margin-top:20px;border:1px solid #ddd;}
     .lista-codigos h4 {color:#333;margin-bottom:8px;}
-    .codigo-item {font-size:13px;padding:3px 0;border-bottom:1px solid #eee;}
+    .codigo-item {font-size:14px;padding:8px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;}
 </style>
 `;
 
-// LOGIN
+// LOGIN (✅ CAMPOS VACÍOS SIEMPRE, NO GUARDA NINGÚN NOMBRE)
 app.get('/', (req, res) => {
   const datos = leerDatos();
   res.send(`
@@ -89,8 +89,8 @@ app.get('/', (req, res) => {
       <div class="tarjeta" style="max-width:400px;margin:auto">
         <h2 style="text-align:center">Ingresar al Sistema</h2>
         <form action="/acceso" method="POST">
-          <input type="text" name="nombre" required placeholder="Tu Nombre Completo">
-          <input type="password" name="codigo" required placeholder="Código de Acceso">
+          <input type="text" name="nombre" required placeholder="Escriba su nombre completo">
+          <input type="password" name="codigo" required placeholder="Escriba su código de acceso">
           <button>ENTRAR</button>
         </form>
       </div>
@@ -141,7 +141,7 @@ app.get('/panel', (req, res) => {
         <a href="#" onclick="mostrar('cargar'); return false;">📝 Cargar Gasto</a>
         <a href="#" onclick="mostrar('historial'); return false;">📜 Ver Historial</a>
         
-        <a id="opcionAdmin" href="#" onclick="mostrar('admin'); return false;" style="display:none;">⚙️ Administrar</a>
+        <a id="opcionAdmin" href="#" onclick="mostrar('admin'); return false;" style="display:none;">⚙️ Administrar Usuarios</a>
         <a id="opcionDinero" href="#" onclick="mostrar('dinero'); return false;" style="display:none;">💰 Poner Dinero</a>
         <a id="opcionConfig" href="#" onclick="mostrar('dueno'); return false;" style="display:none;">👑 Configuración</a>
         
@@ -190,7 +190,6 @@ app.get('/panel', (req, res) => {
             opt += '<option value="' + s.id + '">' + s.nombre + '</option>'; 
           });
 
-          // Si hay datos temporales para corregir, los mostramos cargados
           let nombreVal = temporal.nombre || '';
           let sectorVal = temporal.sector || '';
           let precioVal = temporal.precio || '';
@@ -206,8 +205,6 @@ app.get('/panel', (req, res) => {
                  '</div>' +
                  '</form>' +
                  '<p style="font-size:12px;color:#666;margin-top:8px">* Usá CORREGIR si te equivocaste antes de guardar.</p>';
-
-          // Limpiamos lo temporal después de mostrar
           temporal = {};
         }
 
@@ -221,9 +218,8 @@ app.get('/panel', (req, res) => {
             const sec = datosGlobales.sectores.find(s => s.id === p.sector);
             totalVista += parseFloat(p.precio);
             
-            // Solo Dueño y Admin ven el botón BORRAR
             let accion = (usuario.rol === 'dueno' || usuario.rol === 'admin') 
-              ? '<a href="/borrar/' + i + '" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">🗑️ BORRAR</a>' 
+              ? '<a href="/borrar-gasto/' + i + '" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">🗑️ BORRAR</a>' 
               : '<span style="color:#999">Solo lectura</span>';
 
             html += '<tr><td>' + p.nombre +'</td><td>' + (sec ? sec.nombre : 'Sin categoría') + '</td><td>$ ' + p.precio + '</td><td>'+accion+'</td></tr>';
@@ -232,7 +228,7 @@ app.get('/panel', (req, res) => {
           html += '<tr style="background:#f8f9fa;font-weight:bold"><td colspan="2">TOTAL GASTADO</td><td colspan="2">$ ' + totalVista + '</td></tr></table>';
         }
 
-        // ⚙️ ADMINISTRAR USUARIOS - CON LISTA DE CÓDIGOS EXISTENTES
+        // ⚙️ ADMINISTRAR USUARIOS - CREAR Y ✅ BORRAR USUARIOS
         if (vista === 'admin' && (usuario.rol === 'dueno' || usuario.rol === 'admin')) {
           html = '<h2>Crear Nuevo Usuario</h2>' +
                  '<form action="/crear-usuario" method="POST">' +
@@ -245,10 +241,15 @@ app.get('/panel', (req, res) => {
                  '<button class="btn-verde">➕ CREAR USUARIO</button>' +
                  '</form>';
 
-          // ✅ LISTA DE USUARIOS Y CÓDIGOS PARA NO REPETIR
-          html += '<div class="lista-codigos"><h4>📋 Lista actual de Usuarios y Códigos:</h4>';
+          // ✅ LISTA DE TODOS LOS USUARIOS CON BOTÓN DE BORRAR
+          html += '<div class="lista-codigos"><h4>📋 Lista de Usuarios - <span style="color:#dc2626">Botón para borrar</span></h4>';
           datosGlobales.usuarios.forEach(function(u) {
-            html += '<div class="codigo-item"><strong>'+u.nombre+'</strong> → Código: <strong>'+u.codigoAcceso+'</strong> ('+u.rol+')</div>';
+            // El dueño principal NO SE PUEDE BORRAR
+            if(u.rol !== 'dueno'){
+              html += '<div class="codigo-item"><div><strong>'+u.nombre+'</strong> → Código: <strong>'+u.codigoAcceso+'</strong> ('+u.rol+')</div><a href="/borrar-usuario/'+u.id+'" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">🗑️ ELIMINAR</a></div>';
+            } else {
+              html += '<div class="codigo-item"><div><strong>'+u.nombre+'</strong> → Código: <strong>'+u.codigoAcceso+'</strong> ('+u.rol+') <em>(Principal - no se borra)</em></div></div>';
+            }
           });
           html += '</div>';
         }
@@ -297,14 +298,14 @@ app.post('/guardar', (req, res) => {
 });
 
 // 🗑️ BORRAR GASTO
-app.get('/borrar/:indice', (req, res) => {
+app.get('/borrar-gasto/:indice', (req, res) => {
   const datos = leerDatos();
   datos.productos.splice(req.params.indice, 1);
   calcularTotales(datos);
   res.redirect('/panel');
 });
 
-// ➕ CREAR USUARIO - ✅ GUARDA AL PRINCIPIO DE LA LISTA
+// ➕ CREAR USUARIO - SE AGREGA AL PRINCIPIO
 app.post('/crear-usuario', (req, res) => {
   const datos = leerDatos();
   
@@ -327,6 +328,15 @@ app.post('/crear-usuario', (req, res) => {
   res.send(`<script>alert('✅ USUARIO CREADO Y PUESTO AL PRINCIPIO\\n\\nNombre: ${nuevoUsuario.nombre}\\nCódigo: ${nuevoUsuario.codigoAcceso}');location.href='/panel';</script>`);
 });
 
+// 🗑️ ✅ BORRAR USUARIO (NUEVA FUNCIÓN)
+app.get('/borrar-usuario/:id', (req, res) => {
+  const datos = leerDatos();
+  // Filtramos y sacamos al usuario que querés borrar
+  datos.usuarios = datos.usuarios.filter(u => u.id !== req.params.id);
+  guardarDatos(datos);
+  res.send(`<script>alert('✅ USUARIO ELIMINADO PARA SIEMPRE');location.href='/panel';</script>`);
+});
+
 // 💵 CAMBIAR DINERO INICIAL
 app.post('/cambiar-dinero', (req, res) => {
   const datos = leerDatos();
@@ -347,6 +357,6 @@ app.post('/cambiar-dueno', (req, res) => {
 
 // 🚀 INICIO SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ SISTEMA LISTO CON TUS 3 CAMBIOS`);
+  console.log(`✅ SISTEMA LISTO CON BOTÓN DE BORRAR USUARIOS`);
 });
 
