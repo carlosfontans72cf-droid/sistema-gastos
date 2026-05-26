@@ -123,7 +123,7 @@ app.post('/acceso', (req, res) => {
         }
 
         if(vista === 'cargar') {
-          let opt = ''; datosGlobales.sectores.forEach(s => { opt += '<option value="' + s.id + '">' + s.nombre + '</option>'; });
+        let opt = ''; datosGlobales.sectores.forEach( s => { opt += '<option value="' + s.id + '">' + s.nombre + '</option>'; } );
           c.innerHTML = `
           <h2>Cargar Nuevo Gasto</h2>
           <form action="/guardar" method="POST">
