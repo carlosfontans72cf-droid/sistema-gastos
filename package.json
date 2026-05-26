@@ -1,16 +1,16 @@
 {
   "name": "sistema-gastos",
   "version": "1.0.0",
+  "description": "Sistema de organización del hogar",
   "main": "index.js",
-  "license": "MIT",
   "scripts": {
     "start": "node index.js"
   },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
   "engines": {
     "node": "18.x"
-  },
-  "dependencies": {
-    "express": "4.18.2"
   }
 }
 
