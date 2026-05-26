@@ -5,6 +5,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Base de datos
 const DATA_FILE = path.join(__dirname, 'datos.json');
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify({
@@ -27,17 +28,13 @@ if (!fs.existsSync(DATA_FILE)) {
   }, null, 2));
 }
 
-function leerDatos() {
-  return JSON.parse(fs.readFileSync(DATA_FILE));
-}
-
-function guardarDatos(datos) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(datos, null, 2));
-}
+function leerDatos() { return JSON.parse(fs.readFileSync(DATA_FILE)); }
+function guardarDatos(datos) { fs.writeFileSync(DATA_FILE, JSON.stringify(datos, null, 2)); }
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ESTILOS
 const estilos = `
 <style>
     * {margin:0;padding:0;box-sizing:border-box;font-family:Arial}
@@ -52,13 +49,13 @@ const estilos = `
     button {background:#2563eb;color:white;font-weight:bold;border:none;cursor:pointer}
     .btn-verde {background:#16a34a}
     .btn-rojo {background:#dc2626}
-    .btn-amarillo {background:#f59e0b}
     table {width:100%;border-collapse:collapse;margin-top:10px}
     th,td {padding:12px;text-align:left;border-bottom:1px solid #eee}
     .alerta-roja {background:#f8d7da;color:#721c24;padding:10px;border-radius:5px;margin:10px 0;text-align:center}
 </style>
 `;
 
+// LOGIN
 app.get('/', (req, res) => {
   const datos = leerDatos();
   res.send(`
@@ -84,7 +81,10 @@ app.post('/acceso', (req, res) => {
     return res.send(`<div class="contenedor"><div class="alerta-roja tarjeta" style="max-width:400px;margin:auto"><h3>❌ DATOS INCORRECTOS</h3><a href="/" style="color:#721c24;font-weight:bold">Volver a intentar</a></div></div>`);
   }
   res.send(`<script>localStorage.setItem('u',JSON.stringify({id:'${user.id}',rol:'${user.rol}',nombre:'${user.nombre}'}));location.href='/panel';</script>`);
-});app.get('/panel', (req, res) => {
+});
+
+// PANEL
+app.get('/panel', (req, res) => {
   const datos = leerDatos();
   res.send(`
     <html><head><title>Panel de Control</title>${estilos}</head>
@@ -123,34 +123,29 @@ app.post('/acceso', (req, res) => {
         }
 
         if(vista === 'cargar') {
-    let opt = '';
-    datosGlobales.sectores.forEach( s => {
-        opt += '<option value="' + s.id + '">' + s.nombre + '</option>';
-    });
-
-    c.innerHTML = 
-    '<h2>Cargar Nuevo Gasto</h2>' +
-    '<form action="/guardar" method="POST">' +
-        '<input name="nombre" required placeholder="¿Qué compraste? Ej: Arroz, Jabón...">' +
-        '<select name="sector" required>' + opt + '</select>' +
-        '<input name="precio" type="number" step="0.01" required placeholder="¿Cuánto costó? ($)">' +
-        '<button class="btn-verde">💾 GUARDAR REGISTRO</button>' +
-    '</form>';
-}
-}
-            <select name="sector" required>${opt}</select>
-            <input name="precio" type="number" step="0.01" required placeholder="¿Cuánto costó? ($)">
-            <button class="btn-verde">💾 GUARDAR REGISTRO</button>
-          </form>`;
+          let opt = ''; 
+          datosGlobales.sectores.forEach( function(s) { 
+            opt = opt + '<option value="' + s.id + '">' + s.nombre + '</option>'; 
+          });
+          let html = '';
+          html += '<h2>Cargar Nuevo Gasto</h2>';
+          html += '<form action="/guardar" method="POST">';
+          html += '<input name="nombre" required placeholder="¿Qué compraste? Ej: Arroz, Jabón...">';
+          html += '<select name="sector" required>' + opt + '</select>';
+          html += '<input name="precio" type="number" step="0.01" required placeholder="¿Cuánto costó? ($)">';
+          html += '<button class="btn-verde">💾 GUARDAR REGISTRO</button>';
+          html += '</form>';
+          c.innerHTML = html;
         }
 
         if(vista === 'historial') {
           let html = '<h2>Historial Completo</h2><table><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acción</th></tr>';
-          datosGlobales.productos.forEach((p,i)=>{
-            const sec = datosGlobales.sectores.find(s=>s.id===p.sector);
-            html+=`<tr><td>${p.nombre}</td><td>${sec?sec.nombre:'Sin categoría'}</td><td>$${p.precio}</td><td><a href="/borrar/${i}" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">ELIMINAR</a></td></tr>`;
+          datosGlobales.productos.forEach( (p,i) => {
+            const sec = datosGlobales.sectores.find(function(s){ return s.id===p.sector; });
+            html += '<tr><td>' + p.nombre + '</td><td>' + (sec?sec.nombre:'Sin categoría') + '</td><td>$' + p.precio + '</td><td><a href="/borrar/' + i + '" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">ELIMINAR</a></td></tr>';
           });
-          html += '</table>'; c.innerHTML = html;
+          html += '</table>'; 
+          c.innerHTML = html;
         }
 
         if(vista === 'admin' && (usuario.rol === 'admin' || usuario.rol === 'dueno')) {
@@ -179,13 +174,15 @@ app.post('/acceso', (req, res) => {
   `);
 });
 
+// GUARDAR
 app.post('/guardar', (req, res) => {
   const datos = leerDatos();
   datos.productos.push(req.body);
   guardarDatos(datos);
-  res.send(`<script>alert('✅ GASTO GUARDADO CORRECTAMENTE');location.href='/panel#historial';</script>`);
+  res.send(`<script>alert('✅ GASTO GUARDADO CORRECTAMENTE');location.href='/panel';</script>`);
 });
 
+// BORRAR
 app.get('/borrar/:indice', (req, res) => {
   const datos = leerDatos();
   datos.productos.splice(req.params.indice, 1);
@@ -193,6 +190,7 @@ app.get('/borrar/:indice', (req, res) => {
   res.redirect('/panel');
 });
 
+// CREAR USUARIO
 app.post('/crear-usuario', (req, res) => {
   const datos = leerDatos();
   if(datos.usuarios.some(u => u.codigoAcceso === req.body.codigo)) {
@@ -205,6 +203,7 @@ app.post('/crear-usuario', (req, res) => {
   res.send(`<script>alert('✅ USUARIO CREADO');location.href='/panel';</script>`);
 });
 
+// CAMBIAR DUEÑO
 app.post('/cambiar-dueno', (req, res) => {
   const datos = leerDatos();
   const dueno = datos.usuarios.find(u => u.rol === 'dueno');
@@ -214,6 +213,7 @@ app.post('/cambiar-dueno', (req, res) => {
   res.send(`<script>alert('✅ DATOS ACTUALIZADOS. Tenés que volver a entrar.');localStorage.clear();location.href='/';</script>`);
 });
 
+// INICIAR SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('✅ SISTEMA COMPLETO Y FUNCIONANDO');
+  console.log('✅ SISTEMA COMPLETO Y FUNCIONANDO AL 100%');
 });
