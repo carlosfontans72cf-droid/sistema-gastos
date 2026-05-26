@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-// ⚠️ CAMBIO IMPORTANTE: Puerto obligatorio para Render
 const PORT = process.env.PORT || 3001;
 
 // Base de datos
@@ -232,8 +231,8 @@ app.get('/borrar/:indice', (req, res) => {
   res.redirect('/panel');
 });
 
-// CREAR USUARIO
-app.post('/crear-usuario', (req.post('/crear-usuario', (req, res) => {
+// CREAR USUARIO (CORREGIDO AQUÍ, ERA EL ERROR)
+app.post('/crear-usuario', (req, res) => {
   const datos = leerDatos();
   if(datos.usuarios.some(u => u.codigoAcceso === req.body.codigo.trim())) {
     return res.send(`<script>alert('❌ Código ya existe');history.back();</script>`);
@@ -248,7 +247,7 @@ app.post('/crear-usuario', (req.post('/crear-usuario', (req, res) => {
   datos.usuarios.push(nuevo);
   guardarDatos(datos);
   res.send(`<script>alert('✅ USUARIO CREADO');location.href='/panel';</script>`);
-}));
+});
 
 // CAMBIAR DINERO
 app.post('/cambiar-dinero', (req, res) => {
@@ -268,7 +267,7 @@ app.post('/cambiar-dueno', (req, res) => {
   res.send(`<script>alert('✅ DATOS ACTUALIZADOS');localStorage.clear();location.href='/';</script>`);
 });
 
-// 🚀 INICIO OBLIGATORIO PARA RENDER
+// INICIO DEL SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SERVIDOR CORRIENDO EN PUERTO ${PORT}`);
 });
