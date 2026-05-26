@@ -5,25 +5,35 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// 📁 Guardamos datos en un archivo simple, SIN BASE DE DATOS (así funciona en Render Gratis)
+// 📁 Archivo de datos
 const DATA_FILE = path.join(__dirname, 'datos.json');
-if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify({config: {nombreApp: "Organización del Hogar"}, sectores: [
-  {id:"s1", nombre:"1 - Gastos fijos"}, {id:"s2", nombre:"2 - Verdulería"}, {id:"s3", nombre:"3 - Limpieza"},
-  {id:"s4", nombre:"4 - Aseo"}, {id:"s5", nombre:"5 - Alimentos"}, {id:"s6", nombre:"6 - Mascotas"}, {id:"s7", nombre:"7 - Otros"}
-], usuarios: [
-  {id:"u1", nombre:"Dueño", codigoAcceso:"1234", rol:"dueno", activo:true},
-  {id:"u2", nombre:"Admin", codigoAcceso:"5678", rol:"admin", activo:true},
-  {id:"u3", nombre:"Empleado", codigoAcceso:"9012", rol:"staff", activo:true}
-], productos: []}, null, 2));
+if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify({
+  config: { nombreApp: "Organización del Hogar" },
+  sectores: [
+    { id: "s1", nombre: "1 - Gastos fijos" },
+    { id: "s2", nombre: "2 - Verdulería" },
+    { id: "s3", nombre: "3 - Limpieza" },
+    { id: "s4", nombre: "4 - Aseo" },
+    { id: "s5", nombre: "5 - Alimentos" },
+    { id: "s6", nombre: "6 - Mascotas" },
+    { id: "s7", nombre: "7 - Otros" }
+  ],
+  usuarios: [
+    { id: "u1", nombre: "Dueño", codigoAcceso: "1234", rol: "dueno", activo: true },
+    { id: "u2", nombre: "Admin", codigoAcceso: "5678", rol: "admin", activo: true },
+    { id: "u3", nombre: "Empleado", codigoAcceso: "9012", rol: "staff", activo: true }
+  ],
+  productos: []
+}, null, 2));
 
-// Función para leer/escribir datos
+// Funciones
 function leerDatos() { return JSON.parse(fs.readFileSync(DATA_FILE)); }
 function guardarDatos(datos) { fs.writeFileSync(DATA_FILE, JSON.stringify(datos, null, 2)); }
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🎨 ESTILOS
+// 🎨 Estilos
 const estilos = `
 <style>
     * {margin:0;padding:0;box-sizing:border-box;font-family:Arial}
@@ -33,7 +43,7 @@ const estilos = `
     .nav {text-align:center;margin:15px 0}
     .nav a {display:inline-block;margin:0 8px;padding:10px 16px;background:#eff6ff;border-radius:8px;text-decoration:none;color:#2563eb;font-weight:bold;border:1px solid #dbeafe}
     .nav a:hover {background:#dbeafe}
-    .tarjeta {background:white;border-radius:10px;padding:20px;min-height:300px;box-shadow:0 2px 8px #00000015}
+    .tarjeta {background:white;border-radius:10px;padding:20px;min-height:300px;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
     input,select,button {width:100%;padding:10px;margin:8px 0;border-radius:5px;border:1px solid #ddd;font-size:15px}
     button {background:#2563eb;color:white;font-weight:bold;border:none;cursor:pointer}
     .btn-verde {background:#16a34a}
@@ -45,7 +55,7 @@ const estilos = `
 </style>
 `;
 
-// 📄 RUTAS
+// 📄 Rutas
 app.get('/', (req, res) => {
   const datos = leerDatos();
   res.send(`
@@ -67,19 +77,19 @@ app.get('/', (req, res) => {
 app.post('/acceso', (req, res) => {
   const datos = leerDatos();
   const user = datos.usuarios.find(u => u.nombre === req.body.nombre && u.codigoAcceso === req.body.codigo && u.activo);
-  if (!user) return res.send(`<div class="tarjeta alerta-roja" style="max-width:400px;margin:auto"><h3>❌ Incorrecto</h3><a href="/">Volver</a></div>`);
+  if (!user) return res.send(`<div class="tarjeta alerta-roja" style="max-width:400px;margin:auto"><h3>❌ Datos Incorrectos</h3><a href="/">Volver</a></div>`);
   res.send(`<script>localStorage.setItem('u',JSON.stringify({id:'${user.id}',rol:'${user.rol}',nombre:'${user.nombre}'}));location.href='/panel';</script>`);
 });
 
 app.get('/panel', (req, res) => {
   const datos = leerDatos();
   res.send(`
-    <html><head><title>Panel</title>${estilos}</head>
+    <html><head><title>Panel de Control</title>${estilos}</head>
     <body><div class="contenedor">
       <div class="header">🏠 Sistema de Gastos <p id="userData" style="font-size:14px;margin-top:5px"></p></div>
       <div class="nav">
         <a href="#" onclick="mostrar('inicio');return false;">🏠 Inicio</a>
-        <a href="#" onclick="mostrar('cargar');return false;">📝 Cargar</a>
+        <a href="#" onclick="mostrar('cargar');return false;">📝 Cargar Gasto</a>
         <a href="#" onclick="mostrar('historial');return false;">📜 Historial</a>
         <span id="menuExtra"></span>
         <a href="/" style="color:#dc2626">🚪 Salir</a>
@@ -100,34 +110,37 @@ app.get('/panel', (req, res) => {
       }
       function mostrar(vista) {
         const c = document.getElementById('contenido');
-        if(vista === 'inicio') c.innerHTML = '<h2>Bienvenido</h2><p>Sistema funcionando correctamente 🚀</p>';
+        if(vista === 'inicio') c.innerHTML = '<h2>Bienvenido al Sistema</h2><p>Acá podés controlar todos los gastos del hogar 🚀</p>';
         if(vista === 'cargar') {
           let opt = ''; datosGlobales.sectores.forEach(s=>opt+=`<option value="${s.id}">${s.nombre}</option>`);
-          c.innerHTML = `<h2>Cargar</h2><form action="/guardar" method="POST">
-            <input name="nombre" required placeholder="Producto">
+          c.innerHTML = `<h2>Cargar Nuevo Gasto</h2><form action="/guardar" method="POST">
+            <input name="nombre" required placeholder="Nombre del producto/gasto">
             <select name="sector" required>${opt}</select>
-            <input name="precio" type="number" step="0.01" required placeholder="Precio">
-            <button class="btn-verde">GUARDAR</button>
+            <input name="precio" type="number" step="0.01" required placeholder="Precio ($)">
+            <button class="btn-verde">GUARDAR DATOS</button>
           </form>`;
         }
         if(vista === 'historial') {
-          let html = '<h2>Historial</h2><table><tr><th>Nombre</th><th>Precio</th><th>Acción</th></tr>';
-          datosGlobales.productos.forEach((p,i)=>html+=`<tr><td>${p.nombre}</td><td>$${p.precio}</td><td><a href="/borrar/${i}" class="btn-rojo" style="padding:4px 8px;text-decoration:none">🗑️</a></td></tr>`);
+          let html = '<h2>Historial de Gastos</h2><table><tr><th>Nombre</th><th>Sector</th><th>Precio</th><th>Acción</th></tr>';
+          datosGlobales.productos.forEach((p,i)=>{
+            const sec = datosGlobales.sectores.find(s=>s.id===p.sector);
+            html+=`<tr><td>${p.nombre}</td><td>${sec?sec.nombre:'-'}</td><td>$${p.precio}</td><td><a href="/borrar/${i}" class="btn-rojo" style="padding:4px 8px;text-decoration:none">🗑️</a></td></tr>`;
+          });
           html += '</table>'; c.innerHTML = html;
         }
         if(vista === 'admin' && (usuario.rol === 'admin' || usuario.rol === 'dueno')) {
-          c.innerHTML = `<h2>Usuarios</h2><form action="/crear-usuario" method="POST">
-            <input name="nombre" required placeholder="Nombre">
-            <input name="codigo" required placeholder="Código">
-            <select name="rol"><option value="staff">Staff</option><option value="admin">Admin</option></select>
-            <button class="btn-verde">CREAR</button>
+          c.innerHTML = `<h2>Administrar Usuarios</h2><form action="/crear-usuario" method="POST">
+            <input name="nombre" required placeholder="Nombre completo">
+            <input name="codigo" required placeholder="Código de acceso (números)">
+            <select name="rol"><option value="staff">Empleado</option><option value="admin">Administrador</option></select>
+            <button class="btn-verde">CREAR USUARIO</button>
           </form>`;
         }
         if(vista === 'dueno' && usuario.rol === 'dueno') {
-          c.innerHTML = `<h2>Modificar Datos</h2><form action="/cambiar-dueno" method="POST">
-            <input name="nuevoNombre" required placeholder="Nuevo Nombre">
-            <input name="nuevoCodigo" required placeholder="Nuevo Código">
-            <button class="btn-verde">ACTUALIZAR</button>
+          c.innerHTML = `<h2>Configuración del Sistema</h2><form action="/cambiar-dueno" method="POST">
+            <input name="nuevoNombre" required placeholder="Nuevo nombre de dueño">
+            <input name="nuevoCodigo" required placeholder="Nuevo código">
+            <button class="btn-verde">ACTUALIZAR DATOS</button>
           </form>`;
         }
       }
@@ -140,7 +153,7 @@ app.post('/guardar', (req, res) => {
   const datos = leerDatos();
   datos.productos.push(req.body);
   guardarDatos(datos);
-  res.send(`<script>alert('✅ Guardado');location.href='/panel';</script>`);
+  res.send(`<script>alert('✅ Gasto guardado correctamente');location.href='/panel';</script>`);
 });
 
 app.get('/borrar/:indice', (req, res) => {
@@ -152,11 +165,11 @@ app.get('/borrar/:indice', (req, res) => {
 
 app.post('/crear-usuario', (req, res) => {
   const datos = leerDatos();
-  if(datos.usuarios.some(u => u.codigoAcceso === req.body.codigo)) return res.send(`<script>alert('❌ Código existe')</script>`);
+  if(datos.usuarios.some(u => u.codigoAcceso === req.body.codigo)) return res.send(`<script>alert('❌ Ese código ya existe')</script>`);
   req.body.id = 'u'+Date.now(); req.body.activo = true;
   datos.usuarios.push(req.body);
   guardarDatos(datos);
-  res.send(`<script>alert('✅ Usuario Creado');location.href='/panel';</script>`);
+  res.send(`<script>alert('✅ Usuario creado exitosamente');location.href='/panel';</script>`);
 });
 
 app.post('/cambiar-dueno', (req, res) => {
@@ -165,8 +178,8 @@ app.post('/cambiar-dueno', (req, res) => {
   dueno.nombre = req.body.nuevoNombre;
   dueno.codigoAcceso = req.body.nuevoCodigo;
   guardarDatos(datos);
-  res.send(`<script>alert('✅ Actualizado, volvé a entrar');localStorage.clear();location.href='/';</script>`);
+  res.send(`<script>alert('✅ Datos actualizados, volvé a ingresar');localStorage.clear();location.href='/';</script>`);
 });
 
-// 🚀 INICIAR
-app.listen(PORT, '0.0.0.0', () => console.log('✅ SISTEMA LISTO Y FUNCIONANDO')); codigo arreglado para render
+// 🚀 Iniciar Servidor
+app.listen(PORT, '0.0.0.0', () => console.log('✅ SISTEMA COMPLETAMENTE FUNCIONANDO'));
