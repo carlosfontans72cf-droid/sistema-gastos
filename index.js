@@ -99,7 +99,7 @@ app.get('/panel', (req, res) => {
       </div>
       <div id="contenido" class="tarjeta"></div>
     </div>
-    <script>
+        <script>
       const datosGlobales = ${JSON.stringify(datos)};
       let usuario;
       window.onload = function() {
@@ -107,12 +107,15 @@ app.get('/panel', (req, res) => {
         if(!dato) return location.href='/';
         usuario = JSON.parse(dato);
         document.getElementById('userData').textContent = 'Conectado: ' + usuario.nombre + ' ('+usuario.rol+')';
+        
+        // 🛠️ ESTA ES LA PARTE QUE ARREGLAMOS
         if(usuario.rol === 'dueno' || usuario.rol === 'admin') {
-          document.getElementById('menuAdmin').innerHTML += '<a href="#" onclick="mostrar(\'admin\')">⚙️ Administrar Usuarios</a>';
+          document.getElementById('menuAdmin').innerHTML = '<a href="#" onclick="mostrar(\'admin\')">⚙️ Administrar Usuarios</a>';
         }
         if(usuario.rol === 'dueno') {
-          document.getElementById('menuAdmin').innerHTML += '<a href="#" onclick="mostrar(\'dueno\')">👑 Configuración</a>';
+          document.getElementById('menuAdmin').innerHTML += ' <a href="#" onclick="mostrar(\'dueno\')">👑 Configuración</a>';
         }
+        
         mostrar('inicio');
       }
 
