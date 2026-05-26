@@ -90,16 +90,15 @@ app.get('/panel', (req, res) => {
     <html><head><title>Panel de Control</title>${estilos}</head>
     <body><div class="contenedor">
       <div class="header">🏠 Sistema de Gastos <p id="userData" style="font-size:14px;margin-top:5px;opacity:0.9"></p></div>
-      <div class="nav">
-        <a href="#" onclick="mostrar('inicio');return false;">🏠 Inicio</a>
-        <a href="#" onclick="mostrar('cargar');return false;">📝 Cargar Gasto</a>
-        <a href="#" onclick="mostrar('historial');return false;">📜 Ver Historial</a>
-        <span id="menuAdmin"></span>
-        <a href="/" style="color:#dc2626">🚪 Cerrar Sesión</a>
+      
+      <!-- 🛠️ MENÚ ARREGLADO COMPLETAMENTE -->
+      <div class="nav" id="menuPrincipal">
+        <!-- AQUÍ SE CARGA TODO EL MENÚ SEGÚN EL USUARIO -->
       </div>
+
       <div id="contenido" class="tarjeta"></div>
     </div>
-        <script>
+    <script>
       const datosGlobales = ${JSON.stringify(datos)};
       let usuario;
       window.onload = function() {
@@ -107,15 +106,23 @@ app.get('/panel', (req, res) => {
         if(!dato) return location.href='/';
         usuario = JSON.parse(dato);
         document.getElementById('userData').textContent = 'Conectado: ' + usuario.nombre + ' ('+usuario.rol+')';
+
+        // ✅ ARMAMOS EL MENÚ ENTERO AQUÍ, ASÍ NO FALLA
+        let menuHTML = '';
+        menuHTML += '<a href="#" onclick="mostrar(\'inicio\');return false;">🏠 Inicio</a>';
+        menuHTML += '<a href="#" onclick="mostrar(\'cargar\');return false;">📝 Cargar Gasto</a>';
+        menuHTML += '<a href="#" onclick="mostrar(\'historial\');return false;">📜 Ver Historial</a>';
         
-        // 🛠️ ESTA ES LA PARTE QUE ARREGLAMOS
         if(usuario.rol === 'dueno' || usuario.rol === 'admin') {
-          document.getElementById('menuAdmin').innerHTML = '<a href="#" onclick="mostrar(\'admin\')">⚙️ Administrar Usuarios</a>';
+          menuHTML += '<a href="#" onclick="mostrar(\'admin\');return false;">⚙️ Administrar Usuarios</a>';
         }
         if(usuario.rol === 'dueno') {
-          document.getElementById('menuAdmin').innerHTML += ' <a href="#" onclick="mostrar(\'dueno\')">👑 Configuración</a>';
+          menuHTML += '<a href="#" onclick="mostrar(\'dueno\');return false;">👑 Configuración</a>';
         }
-        
+
+        menuHTML += '<a href="/" style="color:#dc2626">🚪 Cerrar Sesión</a>';
+        document.getElementById('menuPrincipal').innerHTML = menuHTML;
+
         mostrar('inicio');
       }
 
