@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
+// ⚠️ CAMBIO IMPORTANTE: Puerto obligatorio para Render
 const PORT = process.env.PORT || 3001;
 
 // Base de datos
@@ -11,8 +12,8 @@ if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify({
     config: { 
       nombreApp: "Organización del Hogar",
-      dineroInicial: 0,  // DINERO CON EL QUE ARRANCÁS
-      totalGastado: 0    // LO QUE LLEVÁS GASTADO
+      dineroInicial: 0,
+      totalGastado: 0
     },
     sectores: [
       { id: "s1", nombre: "1 - Gastos fijos" },
@@ -35,7 +36,6 @@ if (!fs.existsSync(DATA_FILE)) {
 function leerDatos() { return JSON.parse(fs.readFileSync(DATA_FILE)); }
 function guardarDatos(datos) { fs.writeFileSync(DATA_FILE, JSON.stringify(datos, null, 2)); }
 
-// Función para calcular totales automáticamente
 function calcularTotales(datos) {
   let total = 0;
   datos.productos.forEach(p => {
@@ -49,7 +49,7 @@ function calcularTotales(datos) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ESTILOS MEJORADOS
+// ESTILOS
 const estilos = `
 <style>
     * {margin:0;padding:0;box-sizing:border-box;font-family:Arial}
@@ -76,7 +76,7 @@ const estilos = `
 </style>
 `;
 
-// LOGIN - ✅ ARREGLADO PARA QUE RECONOZCA A TODOS LOS USUARIOS
+// LOGIN
 app.get('/', (req, res) => {
   const datos = leerDatos();
   res.send(`
@@ -97,7 +97,6 @@ app.get('/', (req, res) => {
 
 app.post('/acceso', (req, res) => {
   const datos = leerDatos();
-  // ✅ ARREGLO CLAVE: Buscamos sin importar mayúsculas/minúsculas y espacios
   const nombreIngresado = req.body.nombre.trim().toLowerCase();
   const user = datos.usuarios.find(u => 
     u.nombre.trim().toLowerCase() === nombreIngresado && 
@@ -109,18 +108,13 @@ app.post('/acceso', (req, res) => {
     return res.send(`<div class="contenedor"><div class="alerta-roja tarjeta" style="max-width:400px;margin:auto"><h3>❌ DATOS INCORRECTOS</h3><a href="/" style="color:#721c24;font-weight:bold">Volver a intentar</a></div></div>`);
   }
   
-  // ✅ Guardamos bien todos los datos del usuario nuevo
   res.send(`<script>
-    localStorage.setItem('u', JSON.stringify({
-      id:'${user.id}',
-      rol:'${user.rol}',
-      nombre:'${user.nombre}'
-    }));
+    localStorage.setItem('u', JSON.stringify({id:'${user.id}',rol:'${user.rol}',nombre:'${user.nombre}'}));
     location.href='/panel';
   </script>`);
 });
 
-// PANEL PRINCIPAL
+// PANEL
 app.get('/panel', (req, res) => {
   const datos = leerDatos();
   const totalGastado = calcularTotales(datos);
@@ -133,20 +127,17 @@ app.get('/panel', (req, res) => {
         <p id="userData" style="font-size:14px;margin-top:5px;opacity:0.9"></p>
       </div>
       
-      <!-- 💵 RESUMEN DE DINERO (SIEMPRE VISIBLE) -->
       <div class="resumen">
         <div class="ini">Dinero Inicial:<br>$ ${datos.config.dineroInicial.toLocaleString('es-ES')}</div>
         <div class="gas">Total Gastado:<br>$ ${totalGastado.toLocaleString('es-ES')}</div>
         <div class="saldo ${saldo < 0 ? 'rojo' : ''}">LO QUE QUEDA:<br>$ ${saldo.toLocaleString('es-ES')}</div>
       </div>
 
-      <!-- 🧭 MENÚ - ARREGLADO Y COMPLETO -->
       <div class="nav" id="menuPrincipal">
         <a href="#" onclick="mostrar('inicio'); return false;">🏠 Inicio</a>
         <a href="#" onclick="mostrar('cargar'); return false;">📝 Cargar Gasto</a>
         <a href="#" onclick="mostrar('historial'); return false;">📜 Ver Historial</a>
         
-        <!-- OPCIONES DE ADMIN / DUEÑO (OCULTAS AL PRINCIPIO) -->
         <a id="opcionAdmin" href="#" onclick="mostrar('admin'); return false;" style="display:none;">⚙️ Administrar</a>
         <a id="opcionDinero" href="#" onclick="mostrar('dinero'); return false;" style="display:none;">💰 Poner Dinero</a>
         <a id="opcionConfig" href="#" onclick="mostrar('dueno'); return false;" style="display:none;">👑 Configuración</a>
@@ -154,7 +145,6 @@ app.get('/panel', (req, res) => {
         <a href="/" style="color:#dc2626">🚪 Salir</a>
       </div>
 
-      <!-- 📄 CONTENIDO DINÁMICO -->
       <div id="contenido" class="tarjeta"></div>
     </div>
 
@@ -169,7 +159,6 @@ app.get('/panel', (req, res) => {
         usuario = JSON.parse(dato);
         document.getElementById('userData').textContent = 'Conectado: ' + usuario.nombre + ' (' + usuario.rol + ')';
 
-        // ✅ MOSTRAR OPCIONES SEGÚN ROL (FUNCIONA PARA USUARIOS NUEVOS TAMBIÉN)
         if (usuario.rol === 'dueno' || usuario.rol === 'admin') {
           document.getElementById('opcionAdmin').style.display = 'inline-block';
         }
@@ -185,75 +174,39 @@ app.get('/panel', (req, res) => {
         const c = document.getElementById('contenido');
         let html = '';
 
-        // 🏠 INICIO
         if (vista === 'inicio') {
-          html = '<h2 style="text-align:center;margin-top:30px">✅ BIENVENIDO AL SISTEMA</h2>' +
-                 '<p style="text-align:center;margin-top:15px;font-size:16px">Arriba tenés el resumen de tu dinero. Usá el menú para cargar gastos o administrar.</p>';
+          html = '<h2 style="text-align:center;margin-top:30px">✅ BIENVENIDO AL SISTEMA</h2><p style="text-align:center;margin-top:15px;font-size:16px">Arriba tenés el resumen de tu dinero. Usá el menú para cargar gastos o administrar.</p>';
         }
 
-        // 📝 CARGAR GASTO
         if (vista === 'cargar') {
           let opt = ''; 
           datosGlobales.sectores.forEach(function(s) { 
             opt += '<option value="' + s.id + '">' + s.nombre + '</option>'; 
           });
-          html = '<h2>Cargar Nuevo Gasto</h2>' +
-                 '<form action="/guardar" method="POST">' +
-                 '<input name="nombre" required placeholder="Ej: Arroz, Jabón, Carne...">' +
-                 '<select name="sector" required>' + opt + '</select>' +
-                 '<input name="precio" type="number" step="0.01" required placeholder="Precio del gasto ($)">' +
-                 '<button class="btn-verde">💾 GUARDAR Y ACTUALIZAR TOTALES</button>' +
-                 '</form>';
+          html = '<h2>Cargar Nuevo Gasto</h2><form action="/guardar" method="POST"><input name="nombre" required placeholder="Ej: Arroz, Jabón, Carne..."><select name="sector" required>' + opt + '</select><input name="precio" type="number" step="0.01" required placeholder="Precio ($)"><button class="btn-verde">💾 GUARDAR</button></form>';
         }
 
-        // 📜 HISTORIAL CON TOTALES
         if (vista === 'historial') {
           let totalVista = 0;
-          html = '<h2>Historial Completo de Gastos</h2>' +
-                 '<table><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acción</th></tr>';
-          
+          html = '<h2>Historial Completo</h2><table><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acción</th></tr>';
           datosGlobales.productos.forEach(function(p, i) {
             const sec = datosGlobales.sectores.find(s => s.id === p.sector);
             totalVista += parseFloat(p.precio);
             html += '<tr><td>' + p.nombre +'</td><td>' + (sec ? sec.nombre : 'Sin categoría') + '</td><td>$ ' + p.precio + '</td><td><a href="/borrar/' + i + '" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">ELIMINAR</a></td></tr>';
           });
-          
-          html += '<tr style="background:#f8f9fa;font-weight:bold"><td colspan="2">TOTAL GASTADO</td><td colspan="2">$ ' + totalVista + '</td></tr>';
-          html += '</table>';
+          html += '<tr style="background:#f8f9fa;font-weight:bold"><td colspan="2">TOTAL</td><td colspan="2">$ ' + totalVista + '</td></tr></table>';
         }
 
-        // ⚙️ ADMINISTRAR USUARIOS
         if (vista === 'admin' && (usuario.rol === 'admin' || usuario.rol === 'dueno')) {
-          html = '<h2>Crear Nuevo Usuario</h2>' +
-                 '<form action="/crear-usuario" method="POST">' +
-                 '<input name="nombre" required placeholder="Nombre completo (Ej: Luis)">' +
-                 '<input name="codigo" required placeholder="Código numérico (Ej: 1111)">' +
-                 '<select name="rol">' +
-                 '<option value="staff">Empleado / Solo carga gastos</option>' +
-                 '<option value="admin">Administrador / Carga y crea usuarios</option>' +
-                 '</select>' +
-                 '<button class="btn-verde">➕ CREAR USUARIO NUEVO</button>' +
-                 '</form>';
+          html = '<h2>Crear Usuario</h2><form action="/crear-usuario" method="POST"><input name="nombre" required placeholder="Nombre"><input name="codigo" required placeholder="Código"><select name="rol"><option value="staff">Empleado</option><option value="admin">Admin</option></select><button class="btn-verde">➕ CREAR</button></form>';
         }
 
-        // 💰 PONER DINERO INICIAL (SOLO DUEÑO)
         if (vista === 'dinero' && usuario.rol === 'dueno') {
-          html = '<h2>Definir Dinero Inicial del Mes</h2>' +
-                 '<p style="color:#666;margin-bottom:15px">Acá ponés con cuánta plata arrancás. Ejemplo: 50000</p>' +
-                 '<form action="/cambiar-dinero" method="POST">' +
-                 '<input name="monto" type="number" step="0.01" required placeholder="Ej: 50000" value="' + datosGlobales.config.dineroInicial + '">' +
-                 '<button class="btn-verde">💵 GUARDAR MONTO</button>' +
-                 '</form>';
+          html = '<h2>Definir Dinero Inicial</h2><form action="/cambiar-dinero" method="POST"><input name="monto" type="number" step="0.01" required placeholder="Ej: 50000" value="' + datosGlobales.config.dineroInicial + '"><button class="btn-verde">💵 GUARDAR</button></form>';
         }
 
-        // 👑 CONFIGURACIÓN DUEÑO
         if (vista === 'dueno' && usuario.rol === 'dueno') {
-          html = '<h2>Cambiar Datos del Dueño</h2>' +
-                 '<form action="/cambiar-dueno" method="POST">' +
-                 '<input name="nuevoNombre" required placeholder="Nuevo nombre">' +
-                 '<input name="nuevoCodigo" required placeholder="Nuevo código">' +
-                 '<button class="btn-verde">🔄 ACTUALIZAR</button>' +
-                 '</form>';
+          html = '<h2>Cambiar Datos Dueño</h2><form action="/cambiar-dueno" method="POST"><input name="nuevoNombre" required placeholder="Nuevo nombre"><input name="nuevoCodigo" required placeholder="Nuevo código"><button class="btn-verde">🔄 ACTUALIZAR</button></form>';
         }
 
         c.innerHTML = html;
@@ -263,15 +216,15 @@ app.get('/panel', (req, res) => {
   `);
 });
 
-// 💾 GUARDAR GASTO
+// GUARDAR GASTO
 app.post('/guardar', (req, res) => {
   const datos = leerDatos();
   datos.productos.push(req.body);
   calcularTotales(datos);
-  res.send(`<script>alert('✅ GASTO GUARDADO. Los totales se actualizaron.');location.href='/panel';</script>`);
+  res.send(`<script>alert('✅ GUARDADO');location.href='/panel';</script>`);
 });
 
-// 🗑️ BORRAR GASTO
+// BORRAR
 app.get('/borrar/:indice', (req, res) => {
   const datos = leerDatos();
   datos.productos.splice(req.params.indice, 1);
@@ -279,40 +232,33 @@ app.get('/borrar/:indice', (req, res) => {
   res.redirect('/panel');
 });
 
-// ➕ CREAR USUARIO - ✅ ARREGLADO PARA QUE GUARDE BIEN Y SE PUEDA USAR
-app.post('/crear-usuario', (req, res) => {
+// CREAR USUARIO
+app.post('/crear-usuario', (req.post('/crear-usuario', (req, res) => {
   const datos = leerDatos();
-  
-  // Verificar si el código ya existe
-  const existe = datos.usuarios.some(u => u.codigoAcceso === req.body.codigo.trim());
-  if(existe) {
-    return res.send(`<script>alert('❌ Ese código ya existe, elegí otro');history.back();</script>`);
+  if(datos.usuarios.some(u => u.codigoAcceso === req.body.codigo.trim())) {
+    return res.send(`<script>alert('❌ Código ya existe');history.back();</script>`);
   }
-
-  // Crear el usuario nuevo con todos los datos correctos
-  const nuevoUsuario = {
+  const nuevo = {
     id: 'u' + Date.now(),
     nombre: req.body.nombre.trim(),
     codigoAcceso: req.body.codigo.trim(),
     rol: req.body.rol,
     activo: true
   };
-
-  datos.usuarios.push(nuevoUsuario);
+  datos.usuarios.push(nuevo);
   guardarDatos(datos);
-  
-  res.send(`<script>alert('✅ USUARIO CREADO CORRECTAMENTE\\n\\nNombre: ${nuevoUsuario.nombre}\\nCódigo: ${nuevoUsuario.codigoAcceso}\\n\\nYA PUEDE ENTRAR CON ESTOS DATOS!');location.href='/panel';</script>`);
-});
+  res.send(`<script>alert('✅ USUARIO CREADO');location.href='/panel';</script>`);
+}));
 
-// 💵 CAMBIAR DINERO INICIAL
+// CAMBIAR DINERO
 app.post('/cambiar-dinero', (req, res) => {
   const datos = leerDatos();
   datos.config.dineroInicial = parseFloat(req.body.monto);
   guardarDatos(datos);
-  res.send(`<script>alert('✅ DINERO INICIAL ACTUALIZADO');location.href='/panel';</script>`);
+  res.send(`<script>alert('✅ DINERO ACTUALIZADO');location.href='/panel';</script>`);
 });
 
-// 👑 CAMBIAR DATOS DUEÑO
+// CAMBIAR DUEÑO
 app.post('/cambiar-dueno', (req, res) => {
   const datos = leerDatos();
   const dueno = datos.usuarios.find(u => u.rol === 'dueno');
@@ -322,8 +268,8 @@ app.post('/cambiar-dueno', (req, res) => {
   res.send(`<script>alert('✅ DATOS ACTUALIZADOS');localStorage.clear();location.href='/';</script>`);
 });
 
-// INICIAR SERVIDOR
+// 🚀 INICIO OBLIGATORIO PARA RENDER
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('✅ SISTEMA COMPLETO - USUARIOS FUNCIONANDO 100%');
+  console.log(`✅ SERVIDOR CORRIENDO EN PUERTO ${PORT}`);
 });
 
