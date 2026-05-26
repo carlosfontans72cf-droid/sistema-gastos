@@ -69,9 +69,13 @@ const estilos = `
     button {background:#2563eb;color:white;font-weight:bold;border:none;cursor:pointer}
     .btn-verde {background:#16a34a}
     .btn-rojo {background:#dc2626}
+    .btn-azul {background:#0288d1}
     table {width:100%;border-collapse:collapse;margin-top:10px}
     th,td {padding:12px;text-align:left;border-bottom:1px solid #eee}
     .alerta-roja {background:#f8d7da;color:#721c24;padding:10px;border-radius:5px;margin:10px 0;text-align:center}
+    .lista-codigos {background:#f8f9fa;padding:10px;border-radius:8px;margin-top:20px;border:1px solid #ddd;}
+    .lista-codigos h4 {color:#333;margin-bottom:8px;}
+    .codigo-item {font-size:13px;padding:3px 0;border-bottom:1px solid #eee;}
 </style>
 `;
 
@@ -150,7 +154,8 @@ app.get('/panel', (req, res) => {
     <script>
       const datosGlobales = ${JSON.stringify(datos)};
       let usuario;
-      
+      let temporal = {}; // Para guardar lo que escribe el empleado y corregir
+
       window.onload = function() {
         const dato = localStorage.getItem('u');
         if (!dato) { location.href='/'; return; }
@@ -173,57 +178,125 @@ app.get('/panel', (req, res) => {
         const c = document.getElementById('contenido');
         let html = '';
 
+        // 🏠 INICIO
         if (vista === 'inicio') {
           html = '<h2 style="text-align:center;margin-top:30px">✅ BIENVENIDO AL SISTEMA</h2><p style="text-align:center;margin-top:15px;font-size:16px">Arriba tenés el resumen de tu dinero. Usá el menú para cargar gastos o administrar.</p>';
         }
 
+        // 📝 CARGAR GASTO (CON OPCIÓN DE CORREGIR ANTES DE GUARDAR)
         if (vista === 'cargar') {
           let opt = ''; 
           datosGlobales.sectores.forEach(function(s) { 
             opt += '<option value="' + s.id + '">' + s.nombre + '</option>'; 
           });
-          html = '<h2>Cargar Nuevo Gasto</h2><form action="/guardar" method="POST"><input name="nombre" required placeholder="Ej: Arroz, Jabón, Carne..."><select name="sector" required>' + opt + '</select><input name="precio" type="number" step="0.01" required placeholder="Precio ($)"><button class="btn-verde">💾 GUARDAR</button></form>';
+
+          // Si hay datos temporales para corregir, los mostramos cargados
+          let nombreVal = temporal.nombre || '';
+          let sectorVal = temporal.sector || '';
+          let precioVal = temporal.precio || '';
+
+          html = '<h2>Cargar Nuevo Gasto</h2>' +
+                 '<form id="formGasto" action="/guardar" method="POST">' +
+                 '<input name="nombre" required placeholder="Ej: Arroz, Jabón, Carne..." value="'+nombreVal+'">' +
+                 '<select name="sector" required>'+opt+'</select>' +
+                 '<input name="precio" type="number" step="0.01" required placeholder="Precio ($)" value="'+precioVal+'">' +
+                 '<div style="display:flex;gap:10px;margin-top:10px">' +
+                 '<button type="submit" class="btn-verde" style="flex:2">💾 GUARDAR</button>' +
+                 '<button type="button" class="btn-azul" style="flex:1" onclick="guardarTemporal()">✏️ CORREGIR</button>' +
+                 '</div>' +
+                 '</form>' +
+                 '<p style="font-size:12px;color:#666;margin-top:8px">* Usá CORREGIR si te equivocaste antes de guardar.</p>';
+
+          // Limpiamos lo temporal después de mostrar
+          temporal = {};
         }
 
+        // 📜 HISTORIAL (EMPLEADO SIN BORRAR - DUEÑO/ADMIN CON BORRAR)
         if (vista === 'historial') {
           let totalVista = 0;
-          html = '<h2>Historial Completo</h2><table><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acción</th></tr>';
+          html = '<h2>Historial Completo de Gastos</h2>' +
+                 '<table><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Acción</th></tr>';
+          
           datosGlobales.productos.forEach(function(p, i) {
             const sec = datosGlobales.sectores.find(s => s.id === p.sector);
             totalVista += parseFloat(p.precio);
-            html += '<tr><td>' + p.nombre +'</td><td>' + (sec ? sec.nombre : 'Sin categoría') + '</td><td>$ ' + p.precio + '</td><td><a href="/borrar/' + i + '" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">ELIMINAR</a></td></tr>';
+            
+            // Solo Dueño y Admin ven el botón BORRAR
+            let accion = (usuario.rol === 'dueno' || usuario.rol === 'admin') 
+              ? '<a href="/borrar/' + i + '" class="btn-rojo" style="padding:4px 8px;text-decoration:none;font-size:12px">🗑️ BORRAR</a>' 
+              : '<span style="color:#999">Solo lectura</span>';
+
+            html += '<tr><td>' + p.nombre +'</td><td>' + (sec ? sec.nombre : 'Sin categoría') + '</td><td>$ ' + p.precio + '</td><td>'+accion+'</td></tr>';
           });
-          html += '<tr style="background:#f8f9fa;font-weight:bold"><td colspan="2">TOTAL</td><td colspan="2">$ ' + totalVista + '</td></tr></table>';
+          
+          html += '<tr style="background:#f8f9fa;font-weight:bold"><td colspan="2">TOTAL GASTADO</td><td colspan="2">$ ' + totalVista + '</td></tr></table>';
         }
 
-        if (vista === 'admin' && (usuario.rol === 'admin' || usuario.rol === 'dueno')) {
-          html = '<h2>Crear Usuario</h2><form action="/crear-usuario" method="POST"><input name="nombre" required placeholder="Nombre"><input name="codigo" required placeholder="Código"><select name="rol"><option value="staff">Empleado</option><option value="admin">Admin</option></select><button class="btn-verde">➕ CREAR</button></form>';
+        // ⚙️ ADMINISTRAR USUARIOS - CON LISTA DE CÓDIGOS EXISTENTES
+        if (vista === 'admin' && (usuario.rol === 'dueno' || usuario.rol === 'admin')) {
+          html = '<h2>Crear Nuevo Usuario</h2>' +
+                 '<form action="/crear-usuario" method="POST">' +
+                 '<input name="nombre" required placeholder="Nombre completo (Ej: Luis)">' +
+                 '<input name="codigo" required placeholder="Código numérico (Ej: 1111)">' +
+                 '<select name="rol">' +
+                 '<option value="staff">Empleado / Solo carga gastos</option>' +
+                 '<option value="admin">Administrador / Crea usuarios</option>' +
+                 '</select>' +
+                 '<button class="btn-verde">➕ CREAR USUARIO</button>' +
+                 '</form>';
+
+          // ✅ LISTA DE USUARIOS Y CÓDIGOS PARA NO REPETIR
+          html += '<div class="lista-codigos"><h4>📋 Lista actual de Usuarios y Códigos:</h4>';
+          datosGlobales.usuarios.forEach(function(u) {
+            html += '<div class="codigo-item"><strong>'+u.nombre+'</strong> → Código: <strong>'+u.codigoAcceso+'</strong> ('+u.rol+')</div>';
+          });
+          html += '</div>';
         }
 
+        // 💰 PONER DINERO INICIAL (SOLO DUEÑO)
         if (vista === 'dinero' && usuario.rol === 'dueno') {
-          html = '<h2>Definir Dinero Inicial</h2><form action="/cambiar-dinero" method="POST"><input name="monto" type="number" step="0.01" required placeholder="Ej: 50000" value="' + datosGlobales.config.dineroInicial + '"><button class="btn-verde">💵 GUARDAR</button></form>';
+          html = '<h2>Definir Dinero Inicial del Mes</h2>' +
+                 '<p style="color:#666;margin-bottom:15px">Acá ponés con cuánta plata arrancás. Ejemplo: 50000</p>' +
+                 '<form action="/cambiar-dinero" method="POST">' +
+                 '<input name="monto" type="number" step="0.01" required placeholder="Ej: 50000" value="' + datosGlobales.config.dineroInicial + '">' +
+                 '<button class="btn-verde">💵 GUARDAR MONTO</button>' +
+                 '</form>';
         }
 
+        // 👑 CONFIGURACIÓN DUEÑO
         if (vista === 'dueno' && usuario.rol === 'dueno') {
-          html = '<h2>Cambiar Datos Dueño</h2><form action="/cambiar-dueno" method="POST"><input name="nuevoNombre" required placeholder="Nuevo nombre"><input name="nuevoCodigo" required placeholder="Nuevo código"><button class="btn-verde">🔄 ACTUALIZAR</button></form>';
+          html = '<h2>Cambiar Datos del Dueño</h2>' +
+                 '<form action="/cambiar-dueno" method="POST">' +
+                 '<input name="nuevoNombre" required placeholder="Nuevo nombre">' +
+                 '<input name="nuevoCodigo" required placeholder="Nuevo código">' +
+                 '<button class="btn-verde">🔄 ACTUALIZAR</button>' +
+                 '</form>';
         }
 
         c.innerHTML = html;
+      }
+
+      // Función para guardar lo escrito y seguir corrigiendo
+      function guardarTemporal() {
+        temporal.nombre = document.querySelector('input[name="nombre"]').value;
+        temporal.sector = document.querySelector('select[name="sector"]').value;
+        temporal.precio = document.querySelector('input[name="precio"]').value;
+        alert('✏️ Datos guardados para corregir. Podés modificar y guardar cuando estés bien.');
       }
     </script>
     </body></html>
   `);
 });
 
-// GUARDAR GASTO
+// 💾 GUARDAR GASTO
 app.post('/guardar', (req, res) => {
   const datos = leerDatos();
   datos.productos.push(req.body);
   calcularTotales(datos);
-  res.send(`<script>alert('✅ GUARDADO');location.href='/panel';</script>`);
+  res.send(`<script>alert('✅ GASTO GUARDADO CORRECTAMENTE');location.href='/panel';</script>`);
 });
 
-// BORRAR
+// 🗑️ BORRAR GASTO
 app.get('/borrar/:indice', (req, res) => {
   const datos = leerDatos();
   datos.productos.splice(req.params.indice, 1);
@@ -231,33 +304,38 @@ app.get('/borrar/:indice', (req, res) => {
   res.redirect('/panel');
 });
 
-// CREAR USUARIO (CORREGIDO AQUÍ, ERA EL ERROR)
+// ➕ CREAR USUARIO - ✅ GUARDA AL PRINCIPIO DE LA LISTA
 app.post('/crear-usuario', (req, res) => {
   const datos = leerDatos();
+  
   if(datos.usuarios.some(u => u.codigoAcceso === req.body.codigo.trim())) {
-    return res.send(`<script>alert('❌ Código ya existe');history.back();</script>`);
+    return res.send(`<script>alert('❌ Ese código YA EXISTE, mirá la lista abajo y elegí otro');history.back();</script>`);
   }
-  const nuevo = {
+
+  const nuevoUsuario = {
     id: 'u' + Date.now(),
     nombre: req.body.nombre.trim(),
     codigoAcceso: req.body.codigo.trim(),
     rol: req.body.rol,
     activo: true
   };
-  datos.usuarios.push(nuevo);
+
+  // ✅ LO AGREGAMOS AL PRINCIPIO, NO AL FINAL
+  datos.usuarios.unshift(nuevoUsuario);
+  
   guardarDatos(datos);
-  res.send(`<script>alert('✅ USUARIO CREADO');location.href='/panel';</script>`);
+  res.send(`<script>alert('✅ USUARIO CREADO Y PUESTO AL PRINCIPIO\\n\\nNombre: ${nuevoUsuario.nombre}\\nCódigo: ${nuevoUsuario.codigoAcceso}');location.href='/panel';</script>`);
 });
 
-// CAMBIAR DINERO
+// 💵 CAMBIAR DINERO INICIAL
 app.post('/cambiar-dinero', (req, res) => {
   const datos = leerDatos();
   datos.config.dineroInicial = parseFloat(req.body.monto);
   guardarDatos(datos);
-  res.send(`<script>alert('✅ DINERO ACTUALIZADO');location.href='/panel';</script>`);
+  res.send(`<script>alert('✅ DINERO INICIAL ACTUALIZADO');location.href='/panel';</script>`);
 });
 
-// CAMBIAR DUEÑO
+// 👑 CAMBIAR DATOS DUEÑO
 app.post('/cambiar-dueno', (req, res) => {
   const datos = leerDatos();
   const dueno = datos.usuarios.find(u => u.rol === 'dueno');
@@ -267,8 +345,8 @@ app.post('/cambiar-dueno', (req, res) => {
   res.send(`<script>alert('✅ DATOS ACTUALIZADOS');localStorage.clear();location.href='/';</script>`);
 });
 
-// INICIO DEL SERVIDOR
+// 🚀 INICIO SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ SERVIDOR CORRIENDO EN PUERTO ${PORT}`);
+  console.log(`✅ SISTEMA LISTO CON TUS 3 CAMBIOS`);
 });
 
